@@ -28,27 +28,27 @@ def train(config):
     print('[Decay Step]:', config.decay_step)
     print('[Length Num]:', config.length_num)
 
-    handle = tf.compat.v1.placeholder(tf.string, shape=[])
-    iterator = tf.compat.v1.data.Iterator.from_string_handle(
-        handle, tf.compat.v1.data.get_output_types(train_dataset), tf.compat.v1.data.get_output_shapes(train_dataset))
-    train_iterator = tf.compat.v1.data.make_one_shot_iterator(train_dataset)
-    dev_app_iterator = tf.compat.v1.data.make_one_shot_iterator(dev_dataset)
+    handle = tf.placeholder(tf.string, shape=[])
+    iterator = tf.data.Iterator.from_string_handle(
+        handle, train_dataset.output_types, train_dataset.output_shapes)
+    train_iterator = train_dataset.make_one_shot_iterator()
+    dev_app_iterator = dev_dataset.make_one_shot_iterator()
     rnn_classify = model.FSNet(config, iterator)
 
-    for v in tf.compat.v1.trainable_variables():
+    for v in tf.trainable_variables():
         if v.shape.dims is None:
             print('%65s%5s' % (v.name, ' ' * 5), None)
         else:
             print('%65s%10d' % (v.name, functools.reduce(lambda x, y: x * y, v.shape)))
 
-    sess_config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
+    sess_config = tf.ConfigProto(allow_soft_placement=True)
 
     loss_step = config.loss_save
     lr = config.learning_rate
 
-    with tf.compat.v1.Session(config=sess_config) as sess:
-        writer = tf.compat.v1.summary.FileWriter(config.log_dir)
-        sess.run(tf.compat.v1.global_variables_initializer())
+    with tf.Session(config=sess_config) as sess:
+        writer = tf.summary.FileWriter(config.log_dir)
+        sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver(tf.trainable_variables())
 
         train_handle = sess.run(train_iterator.string_handle())
