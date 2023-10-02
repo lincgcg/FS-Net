@@ -28,11 +28,11 @@ def train(config):
     print('[Decay Step]:', config.decay_step)
     print('[Length Num]:', config.length_num)
 
-    handle = tf.placeholder(tf.string, shape=[])
-    iterator = tf.data.Iterator.from_string_handle(
-        handle, train_dataset.output_types, train_dataset.output_shapes)
-    train_iterator = train_dataset.make_one_shot_iterator()
-    dev_app_iterator = dev_dataset.make_one_shot_iterator()
+    handle = tf.compat.v1.placeholder(tf.string, shape=[])
+    iterator = tf.compat.v1.data.Iterator.from_string_handle(
+        handle, tf.compat.v1.data.get_output_types(train_dataset), tf.compat.v1.data.get_output_shapes(train_dataset))
+    train_iterator = tf.compat.v1.data.make_one_shot_iterator(train_dataset)
+    dev_app_iterator = tf.compat.v1.data.make_one_shot_iterator(dev_dataset)
     rnn_classify = model.FSNet(config, iterator)
 
     for v in tf.trainable_variables():
