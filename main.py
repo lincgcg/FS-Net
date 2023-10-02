@@ -3,69 +3,55 @@ import os
 import train
 import preprocess
 
-home = os.getcwd()
-record_dir = os.path.join(home, 'record')
-save_base = os.path.join(home, 'log')
-log_dir = os.path.join(save_base)
-data_dir = os.path.join(home, 'filter')
-pred_dir = os.path.join(home, 'result')
+import argparse
 
-for dirx in [save_base, record_dir, log_dir, data_dir, pred_dir]:
-    if not os.path.exists(dirx):
-        os.mkdir(dirx)
-
-train_record = os.path.join(record_dir, 'train.json')
-test_record = os.path.join(record_dir, 'test.json')
-train_meta = os.path.join(record_dir, 'train.meta')
-test_meta = os.path.join(record_dir, 'test.meta')
-status_label = os.path.join(data_dir, 'status.label')
-
-flags = tf.flags
-
-flags.DEFINE_string('train_json', train_record, 'the processed train json file')
-flags.DEFINE_string('test_json', test_record, 'the processed test json file')
-flags.DEFINE_string('train_meta', train_meta, 'the processed train number')
-flags.DEFINE_string('test_meta', test_meta, 'the processed test number')
-flags.DEFINE_string('log_dir', log_dir, 'where to save the log')
-flags.DEFINE_string('model_dir', log_dir, 'where to save the model')
-flags.DEFINE_string('data_dir', data_dir, 'where to read data')
-flags.DEFINE_integer('class_num', 18, 'the class number')
-flags.DEFINE_integer('length_block', 1, 'the length of a block')
-flags.DEFINE_integer('min_length', 2, 'the flow under this parameter will be filtered')
-flags.DEFINE_integer('max_packet_length', 5000, 'the largest packet length')
-flags.DEFINE_float('split_ratio', 0.8, 'ratio of train set of target app')
-flags.DEFINE_float('keep_ratio', 1, 'ratio of keeping the example (for small dataset test)')
-flags.DEFINE_integer('max_flow_length_train', 200, 'the max flow length, if larger, drop')
-flags.DEFINE_integer('max_flow_length_test', 2000, 'the max flow length, if larger, drop')
-flags.DEFINE_string('test_model_dir', log_dir, 'the model dir for test result')
-flags.DEFINE_string('pred_dir', pred_dir, 'the dir to save predict result')
-
-flags.DEFINE_integer('batch_size', 128, 'train batch size')
-flags.DEFINE_integer('hidden', 128, 'GRU dimension of hidden state')
-flags.DEFINE_integer('layer', 2, 'layer number of length RNN')
-flags.DEFINE_integer('length_dim', 16, 'dimension of length embedding')
-flags.DEFINE_string('length_num', 'auto', 'length_num')
-
-flags.DEFINE_float('keep_prob', 0.8, 'the keep probability for dropout')
-flags.DEFINE_float('learning_rate', 0.001, 'learning rate')
-flags.DEFINE_integer('iter_num', int(1.2e5), 'iteration number')
-flags.DEFINE_integer('eval_batch', 77, 'evaluated train batches')
-flags.DEFINE_integer('train_eval_batch', 77, 'evaluated train batches')
-flags.DEFINE_string('decay_step', 'auto', 'the decay step')
-flags.DEFINE_float('decay_rate', 0.5, 'the decay rate')
-
-flags.DEFINE_string('mode', 'train', 'model mode: train/prepro/test')
-flags.DEFINE_integer("capacity", int(1e3), "size of dataset shuffle")
-flags.DEFINE_integer("loss_save", 100, "step of saving loss")
-flags.DEFINE_integer("checkpoint", 5000, "checkpoint to save and evaluate the model")
-flags.DEFINE_float("grad_clip", 5.0, "Global Norm gradient clipping rate")
-
-flags.DEFINE_boolean('is_cudnn', True, 'whether take the cudnn gru')
-flags.DEFINE_float('rec_loss', 0.5, 'the parameter to control the reconstruction of length sequence')
+def get_args():
+    
+    parser = argparse.ArgumentParser(description='TensorFlow 2.x Args Parser')
+    
+    parser.add_argument('--train_json', type=str, default="train_record", help='the processed train json file')
+    parser.add_argument('--test_json', type=str, default="test_record", help='the processed test json file')
+    parser.add_argument('--train_meta', type=str, default="train_meta", help='the processed train number')
+    parser.add_argument('--test_meta', type=str, default="test_meta", help='the processed test number')
+    parser.add_argument('--log_dir', type=str, default="log_dir", help='where to save the log')
+    parser.add_argument('--model_dir', type=str, default="log_dir", help='where to save the model')
+    parser.add_argument('--data_dir', type=str, default="data_dir", help='where to read data')
+    parser.add_argument('--class_num', type=int, default=18, help='the class number')
+    parser.add_argument('--length_block', type=int, default=1, help='the length of a block')
+    parser.add_argument('--min_length', type=int, default=2, help='the flow under this parameter will be filtered')
+    parser.add_argument('--max_packet_length', type=int, default=5000, help='the largest packet length')
+    parser.add_argument('--split_ratio', type=float, default=0.8, help='ratio of train set of target app')
+    parser.add_argument('--keep_ratio', type=float, default=1, help='ratio of keeping the example (for small dataset test)')
+    parser.add_argument('--max_flow_length_train', type=int, default=200, help='the max flow length, if larger, drop')
+    parser.add_argument('--max_flow_length_test', type=int, default=2000, help='the max flow length, if larger, drop')
+    parser.add_argument('--test_model_dir', type=str, default="log_dir", help='the model dir for test result')
+    parser.add_argument('--pred_dir', type=str, default="pred_dir", help='the dir to save predict result')
+    parser.add_argument('--batch_size', type=int, default=128, help='train batch size')
+    parser.add_argument('--hidden', type=int, default=128, help='GRU dimension of hidden state')
+    parser.add_argument('--layer', type=int, default=2, help='layer number of length RNN')
+    parser.add_argument('--length_dim', type=int, default=16, help='dimension of length embedding')
+    parser.add_argument('--length_num', type=str, default='auto', help='length_num')
+    parser.add_argument('--keep_prob', type=float, default=0.8, help='the keep probability for dropout')
+    parser.add_argument('--learning_rate', type=float, default=0.001, help='learning rate')
+    parser.add_argument('--iter_num', type=int, default=int(1.2e5), help='iteration number')
+    parser.add_argument('--eval_batch', type=int, default=77, help='evaluated train batches')
+    parser.add_argument('--train_eval_batch', type=int, default=77, help='evaluated train batches')
+    parser.add_argument('--decay_step', type=str, default='auto', help='the decay step')
+    parser.add_argument('--decay_rate', type=float, default=0.5, help='the decay rate')
+    parser.add_argument('--mode', type=str, default='train', help='model mode: train/prepro/test')
+    parser.add_argument('--capacity', type=int, default=int(1e3), help='size of dataset shuffle')
+    parser.add_argument('--loss_save', type=int, default=100, help='step of saving loss')
+    parser.add_argument('--checkpoint', type=int, default=5000, help='checkpoint to save and evaluate the model')
+    parser.add_argument('--grad_clip', type=float, default=5.0, help='Global Norm gradient clipping rate')
+    parser.add_argument('--is_cudnn', type=bool, default=True, help='whether take the cudnn gru')
+    parser.add_argument('--rec_loss', type=float, default=0.5, help='the parameter to control the reconstruction of length sequence')
+    
+    args = parser.parse_args()
+    return args
 
 
 def main(_):
-    config = flags.FLAGS
+    config = get_args()
     if config.length_num == 'auto':
         config.length_num = config.max_packet_length // config.length_block + 4
     else:
