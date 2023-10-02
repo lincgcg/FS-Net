@@ -176,8 +176,8 @@ class FSNet(object):
 
     def _reconstruct(self, inputs, vac_num, label, mask, scope='rec'):
         with tf.variable_scope(scope):
-            logits = keras.layers.Dense(inputs, self.config.hidden, activation=tf.nn.selu)
-            logits = keras.layers.Dense(logits, vac_num)
+            logits = tf.keras.layers.Dense(inputs, self.config.hidden, activation=tf.nn.selu)
+            logits = tf.keras.layers.Dense(logits, vac_num)
             logits = tf.reshape(logits, [-1, vac_num])
             loss_all = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=tf.reshape(label, [-1]))
             mask = tf.cast(tf.reshape(mask, [-1]), dtype=tf.float32)
