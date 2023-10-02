@@ -143,7 +143,7 @@ class FSNet(object):
         with tf.variable_scope(scope):
             if self.is_train and self.config.keep_prob < 1:
                 seq = tf.nn.dropout(seq, rate=1 - (self.config.keep_prob))
-            gru = self._gru(hidden, layer, rate=1 - (self.config.keep_prob), self.is_train)
+            gru = self._gru(hidden, layer, self.config.keep_prob, self.is_train)
             feature, outputs = gru(seq, self.len)
         return feature, outputs
 
