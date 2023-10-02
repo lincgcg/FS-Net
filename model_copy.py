@@ -35,10 +35,10 @@ class MultiBiGRU(object):
             gru_fw = self.gru_fw[layer]
             with tf.variable_scope("bi_%d" % layer):
                 if init_bw is None:
-                    init_bw = tf.get_variable('init_bw', shape=[1, self._hidden], dtype=tf.float32)
+                    init_bw = tf.compat.v1.get_variable('init_bw', shape=[1, self._hidden], dtype=tf.float32)
                     init_bw = tf.tile(init_bw, [batch_size, 1])
                 if init_fw is None:
-                    init_fw = tf.get_variable('init_fw', shape=[1, self._hidden], dtype=tf.float32)
+                    init_fw = tf.compat.v1.get_variable('init_fw', shape=[1, self._hidden], dtype=tf.float32)
                     init_fw = tf.tile(init_fw, [batch_size, 1])
                 output, output_state = tf.nn.bidirectional_dynamic_rnn(
                     gru_fw, gru_bw, outputs[-1], seq_len, dtype=tf.float32, time_major=False,
@@ -81,7 +81,7 @@ class CudaBiGRU(object):
         output_states = []
         for layer in range(self._layer):
             with tf.variable_scope("bi_%d" % layer):
-                init = tf.get_variable('init', shape=[2, 1, self._hidden], dtype=tf.float32)
+                init = tf.compat.v1.get_variable('init', shape=[2, 1, self._hidden], dtype=tf.float32)
                 init = tf.tile(init, [1, batch_size, 1])
                 gru = self.gru[layer]
                 output, output_state = gru(outputs[-1], (init, ))
@@ -104,15 +104,15 @@ class FSNet(object):
         self.config = config
         self.batch_size = config.batch_size
 
-        self.is_train = tf.get_variable("is_train", shape=[], dtype=tf.bool, trainable=False)
-        self.train_true = tf.assign(self.is_train, tf.constant(True, dtype=tf.bool))
-        self.train_false = tf.assign(self.is_train, tf.constant(False, dtype=tf.bool))
-        self.global_step = tf.get_variable('global_step', shape=[], dtype=tf.int32,
+        self.is_train = tf.compat.v1.get_variable("is_train", shape=[], dtype=tf.bool, trainable=False)
+        self.train_true = tf.compat.v1.assign(self.is_train, tf.constant(True, dtype=tf.bool))
+        self.train_false = tf.compat.v1.assign(self.is_train, tf.constant(False, dtype=tf.bool))
+        self.global_step = tf.compat.v1.get_variable('global_step', shape=[], dtype=tf.int32,
                                            initializer=tf.constant_initializer(0), trainable=False)
         self.ids, self.label, self.flow = batch_data.get_next()
         self._gru = CudaBiGRU if config.is_cudnn else MultiBiGRU
         # get best batch shape
-        with tf.variable_scope('reshape'):
+        with tf.compat.v1.variable_scope('reshape'):
             self.mask = tf.cast(self.flow, tf.bool)
             self.len = tf.reduce_sum(tf.cast(self.mask, tf.int32), axis=1)
             self.max_len = tf.reduce_max(self.len)
@@ -123,10 +123,10 @@ class FSNet(object):
         self.loss, self.pred = self._make_graph()
 
         if trainable:
-            self.lr = tf.get_variable("lr", shape=[], dtype=tf.float32, trainable=False)
-            self.clr = tf.train.exponential_decay(self.lr, self.global_step,
+            self.lr = tf.compat.v1.get_variable("lr", shape=[], dtype=tf.float32, trainable=False)
+            self.clr = tf.compat.v1.train.exponential_decay(self.lr, self.global_step,
                                                   self.config.decay_step, self.config.decay_rate, staircase=True)
-            self.opt = tf.train.AdamOptimizer(learning_rate=self.lr, epsilon=1e-8)
+            self.opt = tf.compat.v1.train.AdamOptimizer(learning_rate=self.lr, epsilon=1e-8)
             grads = self.opt.compute_gradients(self.loss)
             gradients, variables = zip(*grads)
             capped_grads, _ = tf.clip_by_global_norm(gradients, config.grad_clip)
@@ -134,15 +134,15 @@ class FSNet(object):
                                                      global_step=self.global_step)
 
     def _embedding(self, emb_dim, vac_num, inputs, scope='embedding'):
-        with tf.variable_scope(scope):
-            embedding = tf.get_variable('embedding', dtype=tf.float32, shape=[vac_num, emb_dim])
+        with tf.compat.v1.variable_scope(scope):
+            embedding = tf.compat.v1.get_variable('embedding', dtype=tf.float32, shape=[vac_num, emb_dim])
             seq = tf.nn.embedding_lookup(embedding, inputs)
         return seq
 
     def _encoder(self, hidden, layer, seq, scope='encoder'):
-        with tf.variable_scope(scope):
+        with tf.compat.v1.variable_scope(scope):
             if self.is_train and self.config.keep_prob < 1:
-                seq = tf.nn.dropout(seq, self.config.keep_prob)
+                seq = tf.nn.dropout(seq, rate=1 - (self.config.keep_prob))
             gru = self._gru(hidden, layer, self.config.keep_prob, self.is_train)
             feature, outputs = gru(seq, self.len)
         return feature, outputs
@@ -152,14 +152,14 @@ class FSNet(object):
         return feature_input
 
     def _decoder(self, hidden, layer, inputs, scope='decoder'):
-        with tf.variable_scope(scope):
+        with tf.compat.v1.variable_scope(scope):
             gru = self._gru(hidden, layer, self.config.keep_prob, self.is_train)
             feature, outputs = gru(inputs, self.len)
         return feature, outputs
 
     def _fusion(self, e_fea, d_fea, scope='fusion'):
         hidden = e_fea.shape.as_list()[-1]
-        with tf.variable_scope(scope):
+        with tf.compat.v1.variable_scope(scope):
             fea = tf.concat([e_fea, d_fea, e_fea * d_fea], 1)
             if self.is_train and self.config.keep_prob < 1:
                 fea = tf.nn.dropout(fea, self.config.keep_prob)
@@ -168,16 +168,19 @@ class FSNet(object):
         return e_fea * g + (1 - g) * update_
 
     def _compress(self, feature, scope='compress'):
-        with tf.variable_scope(scope):
+        with tf.compat.v1.variable_scope(scope):
             ff_ = tf.layers.dense(feature, 2 * self.config.hidden, use_bias=True, activation=tf.nn.selu, name='W1')
             if self.is_train and self.config.keep_prob < 1:
                 ff_ = tf.nn.dropout(ff_, self.config.keep_prob)
         return ff_
 
     def _reconstruct(self, inputs, vac_num, label, mask, scope='rec'):
-        with tf.variable_scope(scope):
-            logits = tf.layers.dense(inputs, self.config.hidden, activation=tf.nn.selu)
-            logits = tf.layers.dense(logits, vac_num)
+        with tf.compat.v1.variable_scope(scope):
+            # logits = tf.keras.layers.Dense(inputs, self.config.hidden, activation=tf.nn.selu)
+            # logits = tf.keras.layers.Dense(logits, vac_num)
+            logits = tf.keras.layers.Dense(self.config.hidden, activation=tf.nn.selu)(inputs)
+            logits = tf.keras.layers.Dense(vac_num)(logits)
+
             logits = tf.reshape(logits, [-1, vac_num])
             loss_all = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=tf.reshape(label, [-1]))
             mask = tf.cast(tf.reshape(mask, [-1]), dtype=tf.float32)
