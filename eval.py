@@ -76,7 +76,8 @@ def _evaluate_Precision_Recall_F1_Macro(real, pred):
     Precision[ALL_] = 1.0 * sum([Precision[i] for i in range(app_num)]) / app_num
     Recall[ALL_] = 1.0 * sum([Recall[i] for i in range(app_num)]) / app_num
     F1[ALL_] = 1.0 * sum([F1[i] for i in range(app_num)]) / app_num
-    Accuracy = 1.0 * (TP + TN) / (TP + TN + FP + FN)
+    # Accuracy = 1.0 * (TP + TN) / (TP + TN + FP + FN)
+    Accuracy =  sum(r == p for r, p in zip(real, pred)) / len(real)
     return Precision, Recall, F1, Accuracy
 
 
