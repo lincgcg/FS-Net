@@ -111,6 +111,6 @@ def evaluate(real, pred):
         "Precision" : Precision,
         "Recall" : Recall,
         "F1" : F1,
-        "Accuracy": : Accuracy
+        "Accuracy": Accuracy
     }
     return res
