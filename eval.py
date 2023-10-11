@@ -69,7 +69,7 @@ def _evaluate_Precision_Recall_F1_Macro(real, pred):
         FP += FP_app
         FN += FN_app
         Precision[app_ind] = TP_app / (TP_app + FP_app)  if (TP_app + FP_app) != 0 else 0
-        Recall[app_ind] = FP_app / (TP_app + FN_app) if (TP_app + FN_app) != 0 else 0
+        Recall[app_ind] = TP_app / (TP_app + FN_app) if (TP_app + FN_app) != 0 else 0
         F1[app_ind] = 2.0 * (Precision[app_ind] * Recall[app_ind])/(Precision[app_ind] + Recall[app_ind]) if (Precision[app_ind] + Recall[app_ind]) != 0 else 0
     
     # 计算macro metric
