@@ -108,9 +108,9 @@ def evaluate(real, pred):
     #     FTF_KEY: FTF
     # }
     res = {
-        "Precision" = Precision,
-        "Recall" = Recall,
-        "F1" = F1,
-        Accuracy = Accuracy
+        "Precision" : Precision,
+        "Recall" : Recall,
+        "F1" : F1,
+        "Accuracy": : Accuracy
     }
     return res
