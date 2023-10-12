@@ -28,7 +28,7 @@ def _transform(datas, block, limit, max_packet):
         app_data = datas[app]
         for idx, example in enumerate(app_data):
             flow = example['flow']
-            # 不进行过滤
+            # 进行过滤
             if len(flow) < limit:
                 print(flow)
                 continue
